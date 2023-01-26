@@ -20,7 +20,7 @@ impl ZoomURL {
 
         Ok(ZoomURL {
             full: url,
-            short: format!("https://zoom.us/j/{}", number),
+            short: format!("https://zoom.us/j/{number}"),
         })
     }
 }
