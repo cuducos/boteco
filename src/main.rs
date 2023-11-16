@@ -1,30 +1,31 @@
-use futures::future::try_join_all;
+use std::process::exit;
+
+use tokio::try_join;
 
 use boteco::cloud_flare::CloudFlare;
 use boteco::errors::BotecoError;
 use boteco::improvmx::ImprovMx;
 
-#[tokio::main]
-async fn main() -> Result<(), BotecoError> {
+async fn run() -> Result<(), BotecoError> {
     env_logger::init();
 
     let args: Vec<String> = std::env::args().collect();
-    if args.len() < 2 {
-        return Err(BotecoError::MissingUrl);
-    }
+    let (url, host) = match args.len() {
+        2..=3 => (args[1].clone(), args.get(2).cloned()),
+        _ => return Err(BotecoError::CliArgumentsError),
+    };
 
-    let cloud_flare = CloudFlare::new(args[1].clone())?;
-    try_join_all(
-        cloud_flare
-            .rules()
-            .await?
-            .into_iter()
-            .map(|rule| cloud_flare.redirect(rule)),
-    )
-    .await?;
-
-    let improv_mx = ImprovMx::new(args.get(2).cloned())?;
-    improv_mx.redirect().await?;
+    let cloud_flare = CloudFlare::new(url)?;
+    let improv_mx = ImprovMx::new(host)?;
+    try_join!(cloud_flare.run(), improv_mx.run())?;
 
     Ok(())
+}
+
+#[tokio::main]
+async fn main() {
+    if let Err(err) = run().await {
+        eprintln!("{err}");
+        exit(1);
+    }
 }

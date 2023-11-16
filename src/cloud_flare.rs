@@ -1,3 +1,4 @@
+use futures::future::try_join_all;
 use serde::{Deserialize, Serialize};
 
 use crate::{errors::BotecoError, settings::Settings, zoom::ZoomUrl};
@@ -61,7 +62,7 @@ impl CloudFlare {
         })
     }
 
-    pub async fn rules(&self) -> Result<Vec<Rule>, BotecoError> {
+    async fn rules(&self) -> Result<Vec<Rule>, BotecoError> {
         let endpoint = format!(
             "{}zones/{}/pagerules",
             API_URL, self.settings.cloud_flare.zone_id
@@ -115,7 +116,7 @@ impl CloudFlare {
         true
     }
 
-    pub fn redirect_url_for(&self, rule: &Rule) -> String {
+    fn redirect_url_for(&self, rule: &Rule) -> String {
         for target in &rule.targets {
             if target.constraint.value == self.settings.private_url {
                 return self.url.full.clone();
@@ -124,7 +125,7 @@ impl CloudFlare {
         self.url.short.clone()
     }
 
-    pub async fn redirect(&self, mut rule: Rule) -> Result<(), BotecoError> {
+    async fn redirect(&self, mut rule: Rule) -> Result<(), BotecoError> {
         if !self.is_target_rule(&rule) {
             return Ok(());
         }
@@ -162,6 +163,16 @@ impl CloudFlare {
             "https://{} => {}",
             payload.targets[0].constraint.value, redirect_to
         );
+        Ok(())
+    }
+
+    pub async fn run(&self) -> Result<(), BotecoError> {
+        let tasks = self
+            .rules()
+            .await?
+            .into_iter()
+            .map(|rule| self.redirect(rule));
+        try_join_all(tasks).await?;
         Ok(())
     }
 }

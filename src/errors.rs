@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 #[derive(Debug)]
 pub enum BotecoError {
     MissingEnvVar(String),
-    MissingUrl,
+    CliArgumentsError,
     HttpError(reqwest::Error),
     DeserializerError(reqwest::Error),
     SerializerError(serde_json::Error),
@@ -19,7 +19,7 @@ impl Display for BotecoError {
             BotecoError::MissingEnvVar(var) => {
                 write!(f, "Missing environment variable: {var}")
             }
-            BotecoError::MissingUrl => write!(f, "Missing URL from the command line."),
+            BotecoError::CliArgumentsError => write!(f, "Usage:\n  boteco <URL> [EMAIL]"),
             BotecoError::HttpError(e) => write!(f, "Error while making request: {e}"),
             BotecoError::DeserializerError(e) => write!(f, "Error deserializing response: {e}"),
             BotecoError::SerializerError(e) => write!(f, "Error serializing payload: {e}"),

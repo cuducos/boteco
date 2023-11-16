@@ -48,7 +48,7 @@ impl ImprovMx {
         })
     }
 
-    pub async fn redirect(&self) -> Result<(), BotecoError> {
+    pub async fn run(&self) -> Result<(), BotecoError> {
         let domain = self.settings.public_url.trim_end_matches('/');
         let url = format!("{API_URL}{domain}/aliases/host");
         let auth = format!("Basic api:{}", self.settings.improv_mx.api_token);
