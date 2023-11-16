@@ -1,16 +1,30 @@
-use boteco::{client::Client, errors::BotecoError};
 use futures::future::try_join_all;
+
+use boteco::cloud_flare::CloudFlare;
+use boteco::errors::BotecoError;
+use boteco::improvmx::ImprovMx;
 
 #[tokio::main]
 async fn main() -> Result<(), BotecoError> {
     env_logger::init();
-    let app = Client::new()?;
+
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() < 2 {
+        return Err(BotecoError::MissingUrl);
+    }
+
+    let cloud_flare = CloudFlare::new(args[1].clone())?;
     try_join_all(
-        app.rules()
+        cloud_flare
+            .rules()
             .await?
             .into_iter()
-            .map(|rule| app.redirect(rule)),
+            .map(|rule| cloud_flare.redirect(rule)),
     )
     .await?;
+
+    let improv_mx = ImprovMx::new(args.get(2).cloned())?;
+    improv_mx.redirect().await?;
+
     Ok(())
 }

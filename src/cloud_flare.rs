@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{errors::BotecoError, settings::Settings, zoom::ZoomURL};
+use crate::{errors::BotecoError, settings::Settings, zoom::ZoomUrl};
 
 const API_URL: &str = "https://api.cloudflare.com/client/v4/";
 
@@ -46,29 +46,27 @@ pub struct Payload {
     pub actions: Vec<Action>,
 }
 
-pub struct Client {
+pub struct CloudFlare {
     settings: Settings,
     client: reqwest::Client,
-    url: ZoomURL,
+    url: ZoomUrl,
 }
 
-impl Client {
-    pub fn new() -> Result<Self, BotecoError> {
-        let args: Vec<String> = std::env::args().collect();
-        if args.len() < 2 {
-            return Err(BotecoError::MissingURL);
-        }
-
-        Ok(Client {
+impl CloudFlare {
+    pub fn new(url: String) -> Result<Self, BotecoError> {
+        Ok(CloudFlare {
             settings: Settings::new()?,
             client: reqwest::Client::new(),
-            url: ZoomURL::new(args[1].clone())?, // TODO: get from args
+            url: ZoomUrl::new(url)?,
         })
     }
 
     pub async fn rules(&self) -> Result<Vec<Rule>, BotecoError> {
-        let endpoint = format!("{}zones/{}/pagerules", API_URL, self.settings.zone_id);
-        let auth = format!("Bearer {}", self.settings.api_token);
+        let endpoint = format!(
+            "{}zones/{}/pagerules",
+            API_URL, self.settings.cloud_flare.zone_id
+        );
+        let auth = format!("Bearer {}", self.settings.cloud_flare.api_token);
         let resp = self
             .client
             .get(endpoint)
@@ -132,7 +130,7 @@ impl Client {
         }
         let endpoint = format!(
             "{}zones/{}/pagerules/{}",
-            API_URL, self.settings.zone_id, rule.id
+            API_URL, self.settings.cloud_flare.zone_id, rule.id
         );
         let redirect_to = self.redirect_url_for(&rule);
         for action in &mut rule.actions {
@@ -143,7 +141,7 @@ impl Client {
             actions: rule.actions,
         };
         let body = serde_json::to_string(&payload).map_err(BotecoError::SerializerError)?;
-        let auth = format!("Bearer {}", self.settings.api_token);
+        let auth = format!("Bearer {}", self.settings.cloud_flare.api_token);
         let resp = self
             .client
             .put(endpoint)
@@ -158,7 +156,7 @@ impl Client {
                 .text()
                 .await
                 .unwrap_or_else(|_| "Could not ready the response body".to_string());
-            return Err(BotecoError::CloudFlareAPIError(status, msg));
+            return Err(BotecoError::CloudFlareApiError(status, msg));
         }
         println!(
             "https://{} => {}",
