@@ -1,4 +1,5 @@
 use futures::future::try_join_all;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use crate::{errors::BotecoError, settings::Settings, zoom::ZoomUrl};
@@ -47,17 +48,21 @@ pub struct Payload {
     pub actions: Vec<Action>,
 }
 
-pub struct CloudFlare {
-    settings: Settings,
-    client: reqwest::Client,
+pub struct CloudFlare<'a> {
+    settings: &'a Settings,
+    client: &'a Client,
     url: ZoomUrl,
 }
 
-impl CloudFlare {
-    pub fn new(url: String) -> Result<Self, BotecoError> {
+impl<'a> CloudFlare<'a> {
+    pub fn new(
+        settings: &'a Settings,
+        client: &'a Client,
+        url: String,
+    ) -> Result<Self, BotecoError> {
         Ok(CloudFlare {
-            settings: Settings::new()?,
-            client: reqwest::Client::new(),
+            settings,
+            client,
             url: ZoomUrl::new(url)?,
         })
     }

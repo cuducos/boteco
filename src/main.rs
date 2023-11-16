@@ -1,10 +1,12 @@
 use std::process::exit;
 
+use reqwest::Client;
 use tokio::try_join;
 
 use boteco::cloud_flare::CloudFlare;
 use boteco::errors::BotecoError;
 use boteco::improvmx::ImprovMx;
+use boteco::settings::Settings;
 
 async fn run() -> Result<(), BotecoError> {
     env_logger::init();
@@ -15,8 +17,10 @@ async fn run() -> Result<(), BotecoError> {
         _ => return Err(BotecoError::CliArgumentsError),
     };
 
-    let cloud_flare = CloudFlare::new(url)?;
-    let improv_mx = ImprovMx::new(host)?;
+    let settings = Settings::new()?;
+    let client = Client::new();
+    let cloud_flare = CloudFlare::new(&settings, &client, url)?;
+    let improv_mx = ImprovMx::new(&settings, &client, host)?;
     try_join!(cloud_flare.run(), improv_mx.run())?;
 
     Ok(())

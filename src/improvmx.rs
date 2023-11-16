@@ -1,3 +1,4 @@
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use crate::{errors::BotecoError, settings::Settings};
@@ -33,17 +34,21 @@ impl RequestBody {
     }
 }
 
-pub struct ImprovMx {
-    settings: Settings,
-    client: reqwest::Client,
+pub struct ImprovMx<'a> {
+    settings: &'a Settings,
+    client: &'a Client,
     host: Option<String>,
 }
 
-impl ImprovMx {
-    pub fn new(host: Option<String>) -> Result<Self, BotecoError> {
+impl<'a> ImprovMx<'a> {
+    pub fn new(
+        settings: &'a Settings,
+        client: &'a Client,
+        host: Option<String>,
+    ) -> Result<Self, BotecoError> {
         Ok(ImprovMx {
-            settings: Settings::new()?,
-            client: reqwest::Client::new(),
+            settings,
+            client,
             host,
         })
     }
